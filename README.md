@@ -197,8 +197,3 @@ shodan init YOUR_API_KEY
 - Handles ARM and AMD64 architectures
 - Safe to re-run where practical
 - Includes per-step timing statistics at the end
-
-## Download
-
-- Script: `install_pt_tools.fish`
-- Documentation: `README.md`

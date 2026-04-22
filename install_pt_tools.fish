@@ -1,4 +1,3 @@
-
 #!/usr/bin/env fish
 
 # install_pt_tools.fish
@@ -510,6 +509,11 @@ raise SystemExit(1)
 
     ensure_standard_paths
 
+    if test $FLAG_DRY_RUN -eq 1
+        log_ok "Dry run complete for Go install"
+        return 0
+    end
+
     if command -v go >/dev/null 2>&1
         log_ok "Installed Go: "(go version)
     else
@@ -520,6 +524,12 @@ end
 function go_install_tool
     set module $argv[1]
     set bin_name $argv[2]
+
+    if test $FLAG_DRY_RUN -eq 1
+        log_info "Would install $bin_name via go install ($module)"
+        print_cmd go install -v $module
+        return 0
+    end
 
     if command -v $bin_name >/dev/null 2>&1
         log_ok "$bin_name already installed"
@@ -605,7 +615,19 @@ function install_shodancli
         end
     end
 
-    if command -v shodan >/dev/null 2>&1
+    if test $FLAG_DRY_RUN -eq 1
+        log_info "Would ensure shodan CLI is installed/upgraded via pipx"
+        print_cmd pipx list
+        print_cmd pipx install shodan
+        print_cmd pipx upgrade shodan
+        return 0
+    end
+
+    set pipx_has_shodan 0
+    pipx list 2>/dev/null | string match -rq 'package shodan '
+    and set pipx_has_shodan 1
+
+    if test $pipx_has_shodan -eq 1
         log_info "Upgrading shodan CLI with pipx"
         run_cmd pipx upgrade shodan
         or log_warn "pipx upgrade shodan failed; existing install may still be usable"
@@ -616,6 +638,7 @@ function install_shodancli
             log_err "Failed to install shodan with pipx"
             return 1
         end
+    end
 
     fish_add_path_once_safe $HOME/.local/bin
     ensure_path_now $HOME/.local/bin
@@ -674,76 +697,6 @@ function install_sn0int
     run_root_cmd apt-get update
     or begin
         log_err "apt-get update failed"
-        return 1
-    end
-
-    log_info "Installing sn0int..."
-    run_root_cmd apt-get install -y sn0int
-    or begin
-        log_err "Failed to install sn0int"
-        return 1
-    end
-
-    log_ok "Installed sn0int"
-end
-
-    if command -v sn0int >/dev/null 2>&1
-        log_ok "sn0int already installed"
-        return 0
-    end
-
-    log_info "Installing sn0int repository prerequisites..."
-    apt_install_if_missing curl sq
-    or begin
-        log_err "Failed to install sn0int prerequisites"
-        return 1
-    end
-
-    set key_url "https://apt.vulns.sexy/kpcyrd.pgp"
-    set key_tmp "/tmp/kpcyrd.pgp"
-    set repo_file "/etc/apt/sources.list.d/apt-vulns-sexy.list"
-    set keyring_file "/etc/apt/trusted.gpg.d/apt-vulns-sexy.gpg"
-
-    log_info "Downloading sn0int repository key..."
-    run_cmd curl -sSf $key_url -o $key_tmp
-    or begin
-        log_err "Failed to download sn0int repository key"
-        return 1
-    end
-
-    log_info "Installing sn0int repository key..."
-    if test $FLAG_DRY_RUN -eq 1
-        print_cmd "cat $key_tmp | sq keyring filter -B --handle 64B13F7117D6E07D661BBCE0FE763A64F5E54FD6 | sudo tee $keyring_file > /dev/null"
-    else
-        cat $key_tmp | sq keyring filter -B --handle 64B13F7117D6E07D661BBCE0FE763A64F5E54FD6 | sudo tee $keyring_file > /dev/null
-        or begin
-            log_err "Failed to install sn0int repository key"
-            rm -f $key_tmp
-            return 1
-        end
-    end
-
-    if test $FLAG_DRY_RUN -eq 0
-        rm -f $key_tmp
-    else
-        print_cmd rm -f $key_tmp
-    end
-
-    log_info "Adding sn0int repository..."
-    if test $FLAG_DRY_RUN -eq 1
-        print_cmd "echo 'deb http://apt.vulns.sexy stable main' | sudo tee $repo_file"
-    else
-        echo 'deb http://apt.vulns.sexy stable main' | sudo tee $repo_file > /dev/null
-        or begin
-            log_err "Failed to add sn0int repository"
-            return 1
-        end
-    end
-
-    log_info "Updating package lists for sn0int..."
-    run_root_cmd apt-get update
-    or begin
-        log_err "apt-get update failed after adding sn0int repository"
         return 1
     end
 

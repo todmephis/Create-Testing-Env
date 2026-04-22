@@ -640,6 +640,60 @@ function install_sn0int
     end
 
     log_info "Installing sn0int repository prerequisites..."
+    apt_install_if_missing curl gnupg
+    or begin
+        log_err "Failed to install prerequisites"
+        return 1
+    end
+
+    set repo_file "/etc/apt/sources.list.d/apt-vulns-sexy.list"
+    set key_file "/etc/apt/trusted.gpg.d/apt-vulns-sexy.gpg"
+
+    log_info "Installing sn0int repository key..."
+    if test $FLAG_DRY_RUN -eq 1
+        print_cmd "curl -fsSL https://apt.vulns.sexy/kpcyrd.pgp | sudo gpg --dearmor -o $key_file"
+    else
+        curl -fsSL https://apt.vulns.sexy/kpcyrd.pgp | sudo gpg --dearmor -o $key_file
+        or begin
+            log_err "Failed to install repository key"
+            return 1
+        end
+    end
+
+    log_info "Adding sn0int repository..."
+    if test $FLAG_DRY_RUN -eq 1
+        print_cmd "echo 'deb http://apt.vulns.sexy stable main' | sudo tee $repo_file"
+    else
+        echo 'deb http://apt.vulns.sexy stable main' | sudo tee $repo_file > /dev/null
+        or begin
+            log_err "Failed to add repository"
+            return 1
+        end
+    end
+
+    log_info "Updating package lists..."
+    run_root_cmd apt-get update
+    or begin
+        log_err "apt-get update failed"
+        return 1
+    end
+
+    log_info "Installing sn0int..."
+    run_root_cmd apt-get install -y sn0int
+    or begin
+        log_err "Failed to install sn0int"
+        return 1
+    end
+
+    log_ok "Installed sn0int"
+end
+
+    if command -v sn0int >/dev/null 2>&1
+        log_ok "sn0int already installed"
+        return 0
+    end
+
+    log_info "Installing sn0int repository prerequisites..."
     apt_install_if_missing curl sq
     or begin
         log_err "Failed to install sn0int prerequisites"

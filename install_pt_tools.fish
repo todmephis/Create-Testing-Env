@@ -616,7 +616,6 @@ function install_shodancli
             log_err "Failed to install shodan with pipx"
             return 1
         end
-    end
 
     fish_add_path_once_safe $HOME/.local/bin
     ensure_path_now $HOME/.local/bin
